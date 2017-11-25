@@ -1,8 +1,8 @@
-import React, { Component } from 'react';
+import React from 'react';
 
 const withFetch = (url) => {
 	return (Component) => {
-		return class withFetchedData extends Component {
+		return class withFetchedData extends React.Component {
 			constructor(props) {
 				super(props);
 				this.state = {
