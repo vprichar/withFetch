@@ -1,24 +1,13 @@
 import React from 'react';
 import Rx from 'rxjs/Rx';
-import { isFunction, noop } from 'lodash';
-import { withState, compose, withHandlers } from 'recompose';
+import { isFunction, isEmpty } from 'lodash';
 
-const withData = withState('data', 'updateData', { refetch: noop, loading: true, error: null });
-
-const withDataHandlers = withHandlers({
-  onResult: ({ updateData }) => (result) => updateData((data) => ({ result, data })),
-  onError: ({ updateData }) => (err) => updateData((data) => ({ data, err })),
-});
-
-const withDataManager = compose(withData, withDataHandlers);
-
-
-const withFetch = (url, whenMounted, Observa = {}) => (Component) => {
+const withFetch = (url, whenMounted, Observa = {}, miInit) => (Component) => {
   class withFetchedData extends React.Component {
 
     state = {
       data: (data) => data,
-      onErro: () => {},
+      onErro: false,
       loading: false,
     };
 
@@ -28,17 +17,16 @@ const withFetch = (url, whenMounted, Observa = {}) => (Component) => {
       }
     }
 
-
-    dofetch = (completed) => {
+    dofetch = (completed, destas) => {
       this.setState({ loading: true });
-      Rx.Observable.from(
-        fetch(url,
-          { headers: {} }
-        ).then((data) => data.json())
-      ).subscribe(
-       (data) => isFunction(completed) ? completed({ data, status: 'ok' }) : this.setState({ data }),
-       (onErro) => isFunction(completed) ? completed({ error: onErro, status: 'error' }) : this.setState({ onErro }),
-       () => { this.setState({ loading: false }); }
+      const promise1 = fetch(url,
+        isEmpty(destas) ? miInit : destas
+      ).then((data) => data.json());
+
+      Rx.Observable.fromPromise(promise1).subscribe(
+        (data) => isFunction(completed) ? completed({ data, status: 'ok', error: null }) : this.setState({ data }),
+        (err) => isFunction(completed) ? completed({ data: null, status: 'error', error: err }) : this.setState({ err }),
+        () => { this.setState({ loading: false }); }
       );
     }
 
@@ -51,8 +39,7 @@ const withFetch = (url, whenMounted, Observa = {}) => (Component) => {
       />);
     }
     }
-
-  return withDataManager(withFetchedData);
+  return withFetchedData;
 };
 
 
